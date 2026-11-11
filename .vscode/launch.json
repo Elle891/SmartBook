@@ -1,0 +1,50 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Backend: FastAPI (uvicorn reload)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "app.main:app",
+        "--reload",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000"
+      ],
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/backend",
+        "ENVIRONMENT": "development",
+        "PLATFORM_DB_TYPE": "mysql",
+        "DATABASE_URL": "mysql+aiomysql://smartbook:smartbook@localhost:3306/platform_registry",
+        "REDIS_URL": "redis://localhost:6379/0",
+        "EMAIL_PROVIDER": "console",
+        "SMARTBOOK_MCP_ENABLED": "true",
+        "SMARTBOOK_MCP_REQUIRE_SESSION": "false",
+        "JWT_ALGORITHM": "HS256"
+      },
+      "jinja": true,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "MCP: smartbook_mcp (stdio)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "smartbook_mcp",
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/backend",
+        "ENVIRONMENT": "development",
+        "PLATFORM_DB_TYPE": "mysql",
+        "DATABASE_URL": "mysql+aiomysql://smartbook:smartbook@localhost:3306/platform_registry",
+        "REDIS_URL": "redis://localhost:6379/0",
+        "SMARTBOOK_MCP_TOKEN": "${env:SMARTBOOK_MCP_TOKEN}",
+        "SMARTBOOK_MCP_REQUIRE_SESSION": "false"
+      },
+      "console": "integratedTerminal"
+    }
+  ]
+}

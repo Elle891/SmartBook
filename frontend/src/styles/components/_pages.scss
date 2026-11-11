@@ -1,0 +1,267 @@
+.sb-page {
+  padding: 0.25rem 0;
+
+  h1 {
+    margin-top: 0;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+}
+
+.sb-page--narrow {
+  max-width: 720px;
+}
+
+.sb-muted {
+  color: $color-muted;
+}
+
+.sb-success-text {
+  color: $color-success;
+  font-size: 0.875rem;
+}
+
+.sb-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+
+  &--inline {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+}
+
+.sb-field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.sb-radio-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.sb-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.sb-card {
+  background: $color-surface;
+  border-radius: $radius;
+  box-shadow: $shadow;
+  padding: 1rem;
+
+  h3 {
+    margin-top: 0;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+}
+
+.sb-panel {
+  background: $color-surface;
+  border-radius: $radius;
+  box-shadow: $shadow;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.sb-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.sb-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.sb-status {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #eef2f7;
+
+  &--Approved { background: #d1fae5; color: $color-success; }
+  &--Rejected { background: #fee2e2; color: $color-error; }
+  &--PendingReview { background: #fef3c7; color: $color-warning; }
+  &--Draft { background: #e5e7eb; color: $color-muted; }
+}
+
+.sb-tag, .sb-tags .sb-tag {
+  display: inline-block;
+  background: #eef2f7;
+  color: $color-text;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  margin: 0.15rem 0.25rem 0.15rem 0;
+}
+
+.sb-tags {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.sb-role-card {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.sb-account-tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  &__code {
+    font-family: monospace;
+    min-width: 4rem;
+  }
+
+  &__name {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  &__type {
+    color: $color-muted;
+    font-size: 0.8rem;
+  }
+
+  &__actions {
+    margin-left: auto;
+  }
+}
+
+.sb-link-btn--danger {
+  color: $color-error;
+}
+
+.sb-input--num {
+  max-width: 120px;
+}
+
+.sb-perm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.35rem;
+}
+
+.sb-check {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+}
+
+.sb-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.sb-modal {
+  background: $color-surface;
+  border-radius: $radius;
+  box-shadow: $shadow;
+  padding: 1.25rem;
+  width: min(520px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.sb-audit-list {
+  background: #f9fafb;
+  border-radius: $radius;
+  padding: 0.75rem 1.25rem;
+}
+
+.sb-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+
+  a, button {
+    border: 1px solid #d1d5db;
+    background: $color-surface;
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-decoration: none;
+    color: $color-text;
+  }
+
+  .is-active {
+    background: $color-primary;
+    border-color: $color-primary;
+    color: #fff;
+  }
+}
+
+.sb-preflight {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    padding: 0.35rem 0;
+  }
+
+  &__ok {
+    color: $color-success;
+  }
+
+  &__warn {
+    color: $color-warning;
+  }
+}
+
+.sb-field--inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}

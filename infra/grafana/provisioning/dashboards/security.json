@@ -1,0 +1,57 @@
+{
+  "uid": "security",
+  "title": "Security",
+  "tags": ["smart-accounting", "security"],
+  "schemaVersion": 38,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Auth Failures (401/403)",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{status=~\"401|403\"}[1m])) by (service)",
+          "legendFormat": "{{service}} auth failures"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "RBAC Rejection Rate",
+      "type": "timeseries",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{status=\"403\"}[1m])) by (service)",
+          "legendFormat": "{{service}} RBAC rejections"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Vault Availability",
+      "type": "stat",
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "probe_success{job=\"blackbox\",instance=~\".*vault.*\"}",
+          "legendFormat": "vault up"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Audit Log Write Rate",
+      "type": "timeseries",
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{handler=~\".*/audit.*\"}[1m]))",
+          "legendFormat": "audit writes/s"
+        }
+      ]
+    }
+  ]
+}

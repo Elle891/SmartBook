@@ -1,0 +1,57 @@
+{
+  "uid": "ml-forecast",
+  "title": "ML Forecast",
+  "tags": ["smart-accounting", "ml"],
+  "schemaVersion": 38,
+  "refresh": "60s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Inference Request Rate",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{job=\"svc-ml\"}[1m]))",
+          "legendFormat": "inference req/s"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Inference Latency p99 (ms)",
+      "type": "timeseries",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"svc-ml\"}[5m])) by (le)) * 1000",
+          "legendFormat": "p99 ms"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Training Job Queue Depth",
+      "type": "stat",
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "celery_queue_length{queue=\"ml-training\"}",
+          "legendFormat": "training queue"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Model Training Duration (p99)",
+      "type": "timeseries",
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(celery_task_duration_seconds_bucket{name=~\".*train.*\"}[30m])) by (le)) * 1000",
+          "legendFormat": "training p99 ms"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="SmartBook">
+  <rect width="128" height="128" rx="24" fill="#1e3a5f"/>
+  <path d="M32 88V40h18c14 0 22 7 22 18 0 8-4 14-11 16l13 14H62L51 76h-5v12H32zm16-26h2c6 0 9-3 9-8s-3-8-9-8h-2v16z" fill="#ffffff"/>
+  <path d="M78 88V40h16v48H78z" fill="#7eb8ff"/>
+</svg>

@@ -1,0 +1,78 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: smart-accounting-dev
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+scrape_configs:
+  # FastAPI services — /metrics exposed by prometheus-fastapi-instrumentator
+  - job_name: svc-accounting
+    static_configs:
+      - targets: ["svc-accounting:8000"]
+    metrics_path: /metrics
+
+  - job_name: svc-ml
+    static_configs:
+      - targets: ["svc-ml:8001"]
+    metrics_path: /metrics
+
+  - job_name: svc-nlp
+    static_configs:
+      - targets: ["svc-nlp:8002"]
+    metrics_path: /metrics
+
+  # Celery workers — scraped via prometheus-celery-exporter sidecar
+  - job_name: celery
+    static_configs:
+      - targets: ["celery-exporter:9808"]
+    metrics_path: /metrics
+
+  # PostgreSQL — postgres_exporter
+  - job_name: postgres
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+    metrics_path: /metrics
+
+  # Redis
+  - job_name: redis
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+    metrics_path: /metrics
+
+  # Kubernetes cluster state
+  - job_name: kube-state-metrics
+    static_configs:
+      - targets: ["kube-state-metrics:8080"]
+    metrics_path: /metrics
+
+  # Node-level hardware/OS metrics
+  - job_name: node-exporter
+    static_configs:
+      - targets: ["node-exporter:9100"]
+    metrics_path: /metrics
+
+  # Blackbox probes (Vault, vLLM, external endpoints)
+  - job_name: blackbox
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - http://vault:8200/v1/sys/health
+          - http://svc-nlp:8002/health
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115

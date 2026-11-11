@@ -1,0 +1,55 @@
+{
+  "uid": "tenant-health",
+  "title": "Tenant Health",
+  "tags": ["smart-accounting", "tenant"],
+  "schemaVersion": 38,
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "account_set_id",
+        "type": "query",
+        "query": "label_values(http_requests_total, account_set_id)",
+        "refresh": 2
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Requests by Tenant",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{account_set_id=~\"$account_set_id\"}[1m])) by (account_set_id)",
+          "legendFormat": "{{account_set_id}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Error Rate by Tenant",
+      "type": "timeseries",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{account_set_id=~\"$account_set_id\",status=~\"5..\"}[1m])) by (account_set_id)",
+          "legendFormat": "{{account_set_id}} errors"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "DB Pool Usage by Tenant",
+      "type": "gauge",
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "pg_stat_activity_count{datname=~\"$account_set_id\"}",
+          "legendFormat": "{{datname}}"
+        }
+      ]
+    }
+  ]
+}

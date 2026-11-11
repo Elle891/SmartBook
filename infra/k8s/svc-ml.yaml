@@ -1,0 +1,193 @@
+# ─── svc-ml: FastAPI Inference Deployment (CPU nodes) ────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: svc-ml
+  namespace: smart-accounting
+  labels:
+    app: svc-ml
+    component: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: svc-ml
+      component: api
+  template:
+    metadata:
+      labels:
+        app: svc-ml
+        component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8001"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: svc-ml
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: fastapi-ml
+          image: ghcr.io/your-org/smart-accounting/svc-ml:latest
+          imagePullPolicy: Always
+          command:
+            - uvicorn
+            - app.ml.main:app
+            - --host
+            - "0.0.0.0"
+            - --port
+            - "8001"
+            - --workers
+            - "4"
+          ports:
+            - containerPort: 8001
+              name: http
+          envFrom:
+            - configMapRef:
+                name: ml-config
+          env:
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vault-secrets
+                  key: vault-token
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "4Gi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 30
+            periodSeconds: 30
+---
+# ─── svc-ml: Celery Training Worker (GPU node pool) ──────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-ml-worker
+  namespace: smart-accounting
+  labels:
+    app: svc-ml
+    component: celery-ml-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: svc-ml
+      component: celery-ml-worker
+  template:
+    metadata:
+      labels:
+        app: svc-ml
+        component: celery-ml-worker
+    spec:
+      serviceAccountName: svc-ml
+      nodeSelector:
+        cloud.google.com/gke-accelerator: nvidia-tesla-t4
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: celery-ml-worker
+          image: ghcr.io/your-org/smart-accounting/svc-ml:latest
+          imagePullPolicy: Always
+          command:
+            - celery
+            - -A
+            - app.ml.celery_app
+            - worker
+            - --loglevel=info
+            - --concurrency=2
+            - -Q
+            - ml-training
+          envFrom:
+            - configMapRef:
+                name: ml-config
+          env:
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vault-secrets
+                  key: vault-token
+          resources:
+            requests:
+              cpu: "2000m"
+              memory: "8Gi"
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "4000m"
+              memory: "16Gi"
+              nvidia.com/gpu: "1"
+---
+# ─── svc-ml: Service ──────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-ml
+  namespace: smart-accounting
+  labels:
+    app: svc-ml
+spec:
+  selector:
+    app: svc-ml
+    component: api
+  ports:
+    - name: http
+      port: 8001
+      targetPort: 8001
+  type: ClusterIP
+---
+# ─── svc-ml: HPA (inference pods) ────────────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: svc-ml-hpa
+  namespace: smart-accounting
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: svc-ml
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# ─── svc-ml: HPA (training workers) ──────────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: celery-ml-worker-hpa
+  namespace: smart-accounting
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: celery-ml-worker
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80

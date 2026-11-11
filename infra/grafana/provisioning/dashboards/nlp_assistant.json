@@ -1,0 +1,57 @@
+{
+  "uid": "nlp-assistant",
+  "title": "NLP Assistant",
+  "tags": ["smart-accounting", "nlp"],
+  "schemaVersion": 38,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "NLP Request Rate",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{job=\"svc-nlp\"}[1m]))",
+          "legendFormat": "nlp req/s"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "NLP Fallback Rate (rule-based classifier)",
+      "type": "timeseries",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(nlp_fallback_total[1m]))",
+          "legendFormat": "fallbacks/s"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "NLP RBAC Rejection Rate",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(nlp_rbac_rejection_total[1m]))",
+          "legendFormat": "RBAC rejections/s"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "vLLM Availability",
+      "type": "stat",
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "probe_success{job=\"blackbox\",instance=~\".*vllm.*\"}",
+          "legendFormat": "vLLM up"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+.sb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 0.875rem;
+  cursor: pointer;
+  text-decoration: none;
+
+  &--primary {
+    background: $color-primary;
+    color: #fff;
+  }
+
+  &--ghost {
+    background: transparent;
+    border-color: #d1d5db;
+    color: $color-text;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

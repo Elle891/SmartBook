@@ -1,0 +1,155 @@
+# ─── svc-nlp: FastAPI + vLLM Deployment (GPU node pool) ─────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: svc-nlp
+  namespace: smart-accounting
+  labels:
+    app: svc-nlp
+    component: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: svc-nlp
+      component: api
+  template:
+    metadata:
+      labels:
+        app: svc-nlp
+        component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8002"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: svc-nlp
+      nodeSelector:
+        cloud.google.com/gke-accelerator: nvidia-tesla-a100
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+      initContainers:
+        - name: wait-for-vllm
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - until wget -qO- http://localhost:8080/health; do sleep 5; done
+      containers:
+        - name: fastapi-nlp
+          image: ghcr.io/your-org/smart-accounting/svc-nlp:latest
+          imagePullPolicy: Always
+          command:
+            - uvicorn
+            - app.nlp.main:app
+            - --host
+            - "0.0.0.0"
+            - --port
+            - "8002"
+            - --workers
+            - "2"
+          ports:
+            - containerPort: 8002
+              name: http
+          envFrom:
+            - configMapRef:
+                name: nlp-config
+          env:
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vault-secrets
+                  key: vault-token
+          resources:
+            requests:
+              cpu: "1000m"
+              memory: "4Gi"
+            limits:
+              cpu: "4000m"
+              memory: "8Gi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 60
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 120
+            periodSeconds: 30
+
+        - name: vllm
+          image: vllm/vllm-openai:v0.4.0
+          args:
+            - --model
+            - deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+            - --host
+            - "0.0.0.0"
+            - --port
+            - "8080"
+            - --tensor-parallel-size
+            - "1"
+            - --max-model-len
+            - "8192"
+          ports:
+            - containerPort: 8080
+              name: vllm
+          resources:
+            requests:
+              cpu: "4000m"
+              memory: "16Gi"
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "8000m"
+              memory: "32Gi"
+              nvidia.com/gpu: "1"
+          volumeMounts:
+            - name: model-cache
+              mountPath: /root/.cache/huggingface
+      volumes:
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: vllm-model-cache
+---
+# ─── svc-nlp: Service ─────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-nlp
+  namespace: smart-accounting
+  labels:
+    app: svc-nlp
+spec:
+  selector:
+    app: svc-nlp
+    component: api
+  ports:
+    - name: http
+      port: 8002
+      targetPort: 8002
+  type: ClusterIP
+---
+# ─── svc-nlp: HPA ─────────────────────────────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: svc-nlp-hpa
+  namespace: smart-accounting
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: svc-nlp
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60

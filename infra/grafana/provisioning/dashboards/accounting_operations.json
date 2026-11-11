@@ -1,0 +1,57 @@
+{
+  "uid": "accounting-operations",
+  "title": "Accounting Operations",
+  "tags": ["smart-accounting", "accounting"],
+  "schemaVersion": 38,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Voucher Creation Rate",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{handler=\"/vouchers\",method=\"POST\"}[1m]))",
+          "legendFormat": "vouchers/s"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Voucher Approval Rate",
+      "type": "timeseries",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{handler=~\".*/approve\"}[1m]))",
+          "legendFormat": "approvals/s"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Report Generation Latency (p99)",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{handler=~\".*/reports/.*\"}[5m])) by (le)) * 1000",
+          "legendFormat": "p99 ms"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Period-End Operations",
+      "type": "stat",
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(increase(http_requests_total{handler=~\".*/period-end/.*\"}[24h]))",
+          "legendFormat": "period-end ops (24h)"
+        }
+      ]
+    }
+  ]
+}

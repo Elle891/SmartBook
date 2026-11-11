@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "smartbook": {
+      "command": "python",
+      "args": ["-m", "smartbook_mcp"],
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "ENVIRONMENT": "development",
+        "PYTHONPATH": "${workspaceFolder}/backend",
+        "SMARTBOOK_MCP_TOKEN": "REPLACE_WITH_JWT_FROM_AUTH_LOGIN",
+        "REDIS_URL": "redis://localhost:6379/0",
+        "DATABASE_URL": "mysql+aiomysql://smartbook:smartbook@localhost:3306/platform_registry"
+      }
+    }
+  }
+}

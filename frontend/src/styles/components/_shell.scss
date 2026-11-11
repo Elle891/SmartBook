@@ -1,0 +1,249 @@
+.sb-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sb-shell__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sb-shell__content {
+  flex: 1;
+  padding: 1.5rem;
+}
+
+.sb-sidebar {
+  width: $sidebar-width;
+  background: $color-primary;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 0;
+}
+
+.sb-sidebar__brand {
+  font-size: 1.25rem;
+  font-weight: 700;
+  padding: 0 1rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.sb-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 0;
+  flex: 1;
+
+  a {
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    font-size: 0.95rem;
+
+    &:hover,
+    &.is-active {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+    }
+  }
+}
+
+.sb-sidebar__footer {
+  padding: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.sb-sidebar__label {
+  display: block;
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin-bottom: 0.35rem;
+}
+
+.sb-select {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border-radius: $radius;
+  border: none;
+}
+
+.sb-topbar {
+  height: $topbar-height;
+  background: $color-surface;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  box-shadow: $shadow;
+}
+
+.sb-topbar__title {
+  font-weight: 600;
+}
+
+.sb-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sb-topbar__user {
+  font-size: 0.875rem;
+  color: $color-muted;
+}
+
+.sb-page h1 {
+  margin-top: 0;
+}
+
+.sb-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.sb-card {
+  background: $color-surface;
+  border-radius: $radius;
+  padding: 1rem 1.25rem;
+  box-shadow: $shadow;
+
+  h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+  }
+
+  p {
+    margin: 0;
+    color: $color-muted;
+    font-size: 0.875rem;
+  }
+}
+
+.sb-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2rem;
+}
+
+.sb-spinner__ring {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e5e7eb;
+  border-top-color: $color-primary;
+  border-radius: 50%;
+  animation: sb-spin 0.8s linear infinite;
+}
+
+@keyframes sb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sb-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin: 0 1.5rem;
+  border-radius: $radius;
+
+  &--error {
+    background: #fef2f2;
+    color: $color-error;
+    border: 1px solid #fecaca;
+  }
+
+  &__close {
+    margin-left: auto;
+    border: none;
+    background: transparent;
+    font-size: 1.25rem;
+    cursor: pointer;
+  }
+}
+
+.sb-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.sb-modal {
+  background: $color-surface;
+  border-radius: $radius;
+  padding: 1.5rem;
+  width: min(420px, 90vw);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.sb-modal__title {
+  margin: 0 0 0.75rem;
+}
+
+.sb-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.sb-toasts {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 900;
+}
+
+.sb-toast {
+  background: $color-surface;
+  border-radius: $radius;
+  padding: 0.75rem 1rem;
+  box-shadow: $shadow;
+  min-width: 240px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+
+  &--info {
+    border-left: 4px solid $color-primary;
+  }
+  &--warning {
+    border-left: 4px solid $color-warning;
+  }
+  &--error {
+    border-left: 4px solid $color-error;
+  }
+}
+
+.sb-toast__close {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .sb-shell {
+    flex-direction: column;
+  }
+
+  .sb-sidebar {
+    width: 100%;
+  }
+}

@@ -1,0 +1,122 @@
+groups:
+  - name: api
+    rules:
+      - alert: APIHighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+          /
+          sum(rate(http_requests_total[5m])) by (service)
+          > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High API error rate on {{ $labels.service }}"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold 5%)"
+
+      - alert: APIP99LatencyHigh
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p99 latency > 2s on {{ $labels.service }}"
+          description: "p99 = {{ $value | humanizeDuration }}"
+
+  - name: database
+    rules:
+      - alert: DBPoolExhaustion
+        expr: |
+          pg_stat_activity_count / pg_settings_max_connections > 0.9
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "DB connection pool near exhaustion"
+          description: "Pool utilization {{ $value | humanizePercentage }}"
+
+  - name: bank_sync
+    rules:
+      - alert: BankSyncFailure
+        expr: |
+          sum(increase(celery_tasks_total{name=~".*bank.*sync.*",state="FAILURE"}[30m])) > 3
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Bank sync task failing repeatedly"
+          description: "{{ $value }} failures in last 30 minutes"
+
+  - name: celery
+    rules:
+      - alert: CeleryQueueDepthHigh
+        expr: celery_queue_length > 500
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Celery queue depth high: {{ $labels.queue }}"
+          description: "Queue depth = {{ $value }}"
+
+  - name: vault
+    rules:
+      - alert: VaultUnreachable
+        expr: probe_success{job="blackbox", instance=~".*vault.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HashiCorp Vault is unreachable"
+          description: "Vault probe has been failing for > 1 minute"
+
+  - name: kubernetes
+    rules:
+      - alert: OOMKilled
+        expr: |
+          kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} == 1
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container OOMKilled: {{ $labels.container }}"
+          description: "Pod {{ $labels.pod }} container {{ $labels.container }} was OOMKilled"
+
+  - name: nlp
+    rules:
+      - alert: VLLMUnavailable
+        expr: probe_success{job="blackbox", instance=~".*vllm.*"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "vLLM server is unavailable"
+          description: "NLP assistant will fall back to rule-based classifier"
+
+      - alert: NLPFallbackRateHigh
+        expr: |
+          sum(rate(nlp_fallback_total[5m]))
+          /
+          sum(rate(http_requests_total{job="svc-nlp"}[5m]))
+          > 0.3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "NLP fallback rate > 30%"
+          description: "Fallback rate = {{ $value | humanizePercentage }}"
+
+      - alert: NLPRBACRejectionRateHigh
+        expr: |
+          sum(rate(nlp_rbac_rejection_total[5m]))
+          /
+          sum(rate(http_requests_total{job="svc-nlp"}[5m]))
+          > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "NLP RBAC rejection rate > 10%"
+          description: "Rejection rate = {{ $value | humanizePercentage }}"

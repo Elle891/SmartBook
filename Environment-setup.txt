@@ -1,0 +1,20 @@
+环境搭建（使用清华 PyPI 镜像，平台中心库默认 MySQL）：
+
+1. 配置 pip 镜像（一次性）：
+   Windows:  .\scripts\setup-pip-mirror.ps1
+
+2. 启动 MySQL + Redis（Docker）：
+   docker compose up -d mysql redis
+
+3. 平台库迁移 + 安装依赖：
+   set PLATFORM_DB_TYPE=mysql
+   set DATABASE_URL=mysql+aiomysql://smartbook:smartbook@localhost:3306/platform_registry
+   .\scripts\migrate-platform.ps1
+
+   cd backend
+   set PYTHONPATH=
+   pip install -r requirements-dev.txt
+   python -m pytest tests/ -v --tb=long
+
+4. 若需 PostgreSQL 平台库：
+   docker compose -f docker-compose.yml -f docker-compose.platform-postgres.yml up -d

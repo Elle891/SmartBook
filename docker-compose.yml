@@ -1,0 +1,349 @@
+version: "3.9"
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # ─── Frontend ────────────────────────────────────────────────────────────────
+  svc-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: smart-accounting/svc-frontend:dev
+    ports:
+      - "3000:80"
+    depends_on:
+      - svc-accounting
+    logging: *default-logging
+    networks:
+      - accounting-net
+
+  # ─── Accounting Core ─────────────────────────────────────────────────────────
+  svc-accounting:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    image: smart-accounting/svc-accounting:dev
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    environment:
+      - PLATFORM_DB_TYPE=mysql
+      - DATABASE_URL=mysql+aiomysql://smartbook:smartbook@mysql:3306/platform_registry
+      - REDIS_URL=redis://redis:6379/0
+      - VAULT_ADDR=http://vault-dev:8200
+      - VAULT_TOKEN=dev-root-token
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+      - ENVIRONMENT=development
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      vault-dev:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+    logging: *default-logging
+    networks:
+      - accounting-net
+
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    image: smart-accounting/svc-accounting:dev
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=4 -Q accounting
+    environment:
+      - PLATFORM_DB_TYPE=mysql
+      - DATABASE_URL=mysql+aiomysql://smartbook:smartbook@mysql:3306/platform_registry
+      - REDIS_URL=redis://redis:6379/0
+      - VAULT_ADDR=http://vault-dev:8200
+      - VAULT_TOKEN=dev-root-token
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+      - ENVIRONMENT=development
+    depends_on:
+      - svc-accounting
+    volumes:
+      - ./backend:/app
+    logging: *default-logging
+    networks:
+      - accounting-net
+
+  # ─── ML Service ──────────────────────────────────────────────────────────────
+  svc-ml:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    image: smart-accounting/svc-ml:dev
+    command: uvicorn app.ml.main:app --host 0.0.0.0 --port 8001 --reload
+    ports:
+      - "8001:8001"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - VAULT_ADDR=http://vault-dev:8200
+      - VAULT_TOKEN=dev-root-token
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - SVC_ACCOUNTING_URL=http://svc-accounting:8000
+      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+      - ENVIRONMENT=development
+    depends_on:
+      - redis
+      - mlflow
+      - svc-accounting
+    volumes:
+      - ./backend:/app
+    logging: *default-logging
+    networks:
+      - accounting-net
+
+  celery-ml-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    image: smart-accounting/svc-ml:dev
+    command: celery -A app.ml.celery_app worker --loglevel=info --concurrency=2 -Q ml-training
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - VAULT_ADDR=http://vault-dev:8200
+      - VAULT_TOKEN=dev-root-token
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - SVC_ACCOUNTING_URL=http://svc-accounting:8000
+      - ENVIRONMENT=development
+    depends_on:
+      - svc-ml
+    volumes:
+      - ./backend:/app
+    logging: *default-logging
+    networks:
+      - accounting-net
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.11.1
+    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow.db --default-artifact-root /mlflow/artifacts
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-data:/mlflow
+    logging: *default-logging
+    networks:
+      - accounting-net
+
+  # ─── NLP Service ─────────────────────────────────────────────────────────────
+  svc-nlp:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    image: smart-accounting/svc-nlp:dev
+    command: uvicorn app.nlp.main:app --host 0.0.0.0 --port 8002 --reload
+    ports:
+      - "8002:8002"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - VAULT_ADDR=http://vault-dev:8200
+      - VAULT_TOKEN=dev-root-token
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - SVC_ACCOUNTING_URL=http://svc-accounting:8000
+      - VLLM_BASE_URL=http://vllm-dev:8080
+      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+      - ENVIRONMENT=development
+    depends_on:
+      - redis
+      - svc-accounting
+    volumes:
+      - ./backend:/app
+    logging: *default-logging
+    networks:
+      - accounting-net
+
+  vllm-dev:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    logging: *default-logging
+    networks:
+      - accounting-net
+    profiles:
+      - nlp
+
+  # ─── Shared Infrastructure ───────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: platform_registry
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging: *default-logging
+    networks:
+      - accounting-net
+
+  # Platform center DB option — use with docker-compose.platform-mysql.yml
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: platform_registry
+      MYSQL_USER: smartbook
+      MYSQL_PASSWORD: smartbook
+    ports:
+      - "3306:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    logging: *default-logging
+    networks:
+      - accounting-net
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    logging: *default-logging
+    networks:
+      - accounting-net
+
+  vault-dev:
+    image: hashicorp/vault:1.15
+    command: vault server -config=/vault/config/vault-dev.hcl
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: dev-root-token
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./infra/vault:/vault/config
+      - vault-data:/vault/data
+    logging: *default-logging
+    networks:
+      - accounting-net
+
+  # ─── Observability ───────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.50.1
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    logging: *default-logging
+    networks:
+      - accounting-net
+
+  grafana:
+    image: grafana/grafana:10.3.3
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - loki
+    logging: *default-logging
+    networks:
+      - accounting-net
+
+  loki:
+    image: grafana/loki:2.9.5
+    command: -config.file=/etc/loki/loki.yml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./infra/loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+    logging: *default-logging
+    networks:
+      - accounting-net
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.55
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+      - "14250:14250"
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    logging: *default-logging
+    networks:
+      - accounting-net
+
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./infra/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    logging: *default-logging
+    networks:
+      - accounting-net
+
+volumes:
+  postgres-data:
+  mysql-data:
+  redis-data:
+  vault-data:
+  mlflow-data:
+  ollama-data:
+  prometheus-data:
+  grafana-data:
+  loki-data:
+
+networks:
+  accounting-net:
+    driver: bridge

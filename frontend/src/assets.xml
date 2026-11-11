@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Odoo-style asset bundle manifest (Task 31).
+  Bundled by build.js / dev.js into dist/assets/.
+-->
+<odoo>
+  <template id="assets_backend" name="SmartBook Backend Assets">
+    <link rel="stylesheet" type="text/scss" href="/src/styles/main.scss"/>
+    <script type="text/javascript" src="/src/main.js"/>
+  </template>
+</odoo>

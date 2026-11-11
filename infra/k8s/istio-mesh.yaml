@@ -1,0 +1,151 @@
+# ─── Istio: PeerAuthentication — enforce mTLS for all services ───────────────
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default-mtls
+  namespace: smart-accounting
+spec:
+  mtls:
+    mode: STRICT
+---
+# ─── Istio: AuthorizationPolicy — svc-nlp → svc-accounting ──────────────────
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-nlp-to-accounting
+  namespace: smart-accounting
+spec:
+  selector:
+    matchLabels:
+      app: svc-accounting
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/smart-accounting/sa/svc-nlp"
+      to:
+        - operation:
+            methods: ["GET", "POST", "PATCH", "DELETE"]
+---
+# ─── Istio: AuthorizationPolicy — svc-ml → svc-accounting ───────────────────
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ml-to-accounting
+  namespace: smart-accounting
+spec:
+  selector:
+    matchLabels:
+      app: svc-accounting
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/smart-accounting/sa/svc-ml"
+      to:
+        - operation:
+            methods: ["GET"]
+---
+# ─── Istio: DestinationRule — circuit breaking for svc-accounting ────────────
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: svc-accounting-circuit-breaker
+  namespace: smart-accounting
+spec:
+  host: svc-accounting
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 50
+        http2MaxRequests: 100
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+---
+# ─── Istio: DestinationRule — circuit breaking for svc-ml ────────────────────
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: svc-ml-circuit-breaker
+  namespace: smart-accounting
+spec:
+  host: svc-ml
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 50
+      http:
+        http1MaxPendingRequests: 20
+        http2MaxRequests: 50
+    outlierDetection:
+      consecutive5xxErrors: 3
+      interval: 30s
+      baseEjectionTime: 60s
+      maxEjectionPercent: 100
+---
+# ─── Istio: DestinationRule — circuit breaking for svc-nlp ───────────────────
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: svc-nlp-circuit-breaker
+  namespace: smart-accounting
+spec:
+  host: svc-nlp
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 50
+      http:
+        http1MaxPendingRequests: 20
+        http2MaxRequests: 50
+    outlierDetection:
+      consecutive5xxErrors: 3
+      interval: 30s
+      baseEjectionTime: 60s
+      maxEjectionPercent: 100
+---
+# ─── Istio: VirtualService — retry policy for svc-accounting ─────────────────
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: svc-accounting-vs
+  namespace: smart-accounting
+spec:
+  hosts:
+    - svc-accounting
+  http:
+    - retries:
+        attempts: 3
+        perTryTimeout: 10s
+        retryOn: "5xx,reset,connect-failure,retriable-4xx"
+      route:
+        - destination:
+            host: svc-accounting
+            port:
+              number: 8000
+---
+# ─── ServiceAccounts ──────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: svc-accounting
+  namespace: smart-accounting
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: svc-ml
+  namespace: smart-accounting
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: svc-nlp
+  namespace: smart-accounting
